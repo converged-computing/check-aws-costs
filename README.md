@@ -22,6 +22,11 @@ A third idea I'm also thinking is that it might be easy enough to just plot ever
 
 ```bash
 pip install -r requirements.txt
+
+# See what you can customize
+python check-aws-costs.py --help
+
+# Run the default, looking at DAILY (granularity) AmortizedCost (metric) SERVICE (dimension) for 90 days over 4 regions (us-east-1/2 and us-west-1/2).
 python check-aws-costs.py
 ```
 ```console
@@ -30,12 +35,42 @@ Querying for daily cost by service for us-east-2
 Querying for daily cost by service for us-west-1
 Querying for daily cost by service for us-west-2
 Saving raw results to cache/spending-2023-09-11.json
+Saving raw results to cache/spending-latest.json
 Adding us-east-1 to the data frame...
 Adding us-east-2 to the data frame...
 Adding us-west-1 to the data frame...
 Adding us-west-2 to the data frame...
 Saving formatted results to cache/spending-2023-09-11.csv
+Saving formatted results to cache/spending-latest.csv
 ```
+
+This generates the files mentioned above.
+Note that we save based on the day, but also "latest" to make it easy to find the latest
+to plot. Hey, if "latest" works poorly for container tags it can work here too! How to plot?
+
+```bash
+python plot-aws-costs.py
+```
+
+This will generate a pdf in your present working directory. We don't generate plots if the total is under $5. 
+
+```console
+Skipping amazon-simple-notification-service, total across regions is < $5
+Skipping amazon-simple-queue-service, total across regions is < $5
+Skipping amazon-simple-storage-service, total across regions is < $5
+Skipping amazoncloudwatch, total across regions is < $5
+Skipping amazon-elastic-container-service-for-kubernetes, total across regions is < $5
+Skipping amazon-ec2-container-registry-(ecr), total across regions is < $5
+Skipping amazon-route-53, total across regions is < $5
+Skipping amazon-virtual-private-cloud, total across regions is < $5
+Skipping aws-systems-manager, total across regions is < $5
+Skipping amazon-elastic-container-registry-public, total across regions is < $5
+Skipping aws-lambda, total across regions is < $5
+Skipping tax, total across regions is < $5
+Skipping aws-cost-explorer, total across regions is < $5
+```
+
+The data is fairly generic and we could have other output types/formats too.
 
 ## References
 
