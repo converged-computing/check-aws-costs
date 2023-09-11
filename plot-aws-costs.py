@@ -8,7 +8,7 @@
 import argparse
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import pandas
@@ -20,8 +20,6 @@ sns.set_theme()
 
 # Get a full year of a range between today and tomorrow
 today = datetime.now()
-tomorrow = today + timedelta(days=1)
-start = tomorrow - timedelta(days=365)
 here = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -37,6 +35,12 @@ def get_parser():
         help="csv data frame file to plot (defaults to $PWD/cache/spending-latest.csv).",
         default=os.path.join(here, "cache", "spending-latest.csv"),
     )
+    parser.add_argument(
+        "--outdir",
+        help="Output directory for images (defaults to $PWD/img)",
+        default=os.path.join(here, "img"),
+    )
+
     return parser
 
 
@@ -76,7 +80,7 @@ def run():
         keepers.add(group)
 
     # Total plots are the number of groups by metrics (each plot has all regions)
-    total_plots = len(keepers) * len(df.metric.unique())
+    total_plots = 2 * len(keepers) * len(df.metric.unique())
 
     # Make some nice colors
     colors = [list(x) for x in cm["Paired"].colors]
@@ -95,37 +99,47 @@ def run():
     # Stack dem pancakes
     fig, axs = plt.subplots(nrows=total_plots, figsize=(12, total_plots * 3))
 
+    # Date specific output directory (when generated)
+    outdir = os.path.join(args.outdir, today.strftime("%Y-%m-%d"))
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
     # We assume these are the same
     if len(df.unit.unique()) > 1:
         raise ValueError("Trying to compare different units.")
     unit = df.unit.unique()[0]
 
-    # Plot by group
-    # TODO: stacked area with total across regions
-    # TODO: an accumulative view
+    # Plot by group, line plots (by region and for all)
     idx = 0
     for group in df.group.unique():
         if group not in keepers:
             continue
-        ax = axs[idx]
-        ax.tick_params("x", labelrotation=90)
         subset = df[df.group == group]
-        plot = sns.lineplot(
-            x="start",
-            y="amount",
-            markers=True,
-            data=subset,
-            palette=region_colors,
-            hue="region",
-            ax=ax,
-        )
-        plot.set_title(f"AWS cost group {group} by region")
-        plot.set_ylabel(f"Amount ({unit})")
-        idx += 1
+        by_region = subset[subset.region != "all"]
+        all_regions = subset[subset.region == "all"]
+        groups = {"for all regions": all_regions, "by region": by_region}
+        for k, v in groups.items():
+            ax = axs[idx]
+            ax.tick_params("x", labelrotation=90)
+            plot = sns.lineplot(
+                x="start",
+                y="amount",
+                markers=True,
+                data=v,
+                palette=region_colors,
+                hue="region",
+                ax=ax,
+            )
+            plot.set_title(f"AWS cost group {group} {k}")
+            plot.set_ylabel(f"Amount ({unit})")
+            idx += 1
 
     fig.tight_layout()
-    fig.savefig("aws-spending.pdf")
+    fig.savefig(os.path.join(outdir, "aws-spending-by-region.pdf"))
     plt.close()
+
+    # TODO Generate stacked area, one per group
+    # TODO: an accumulative view
 
 
 if __name__ == "__main__":
